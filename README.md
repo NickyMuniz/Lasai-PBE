@@ -106,4 +106,4 @@ curl http://localhost:8080/restaurante
 
 ## Autor
 
-Desenvolvido por **SEU NOME**.
+Desenvolvido por **Nicolly Muniz**.
