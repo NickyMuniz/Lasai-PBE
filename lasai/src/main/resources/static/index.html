@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lasai</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --vinho: #6B1E2E;
+            --caramelo: #D58936;
+            --terracota: #A44200;
+            --creme: #FFF6EA;
+            --card: #FFFFFF;
+            --texto: #3A1A1F;
+            --suave: #8a6a5e;
+            --borda: #F0DCC4;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; font-family: 'Fredoka', system-ui, sans-serif;
+            background: var(--creme); color: var(--texto);
+        }
+        header {
+            background: var(--vinho); color: var(--creme);
+            padding: 22px 20px; text-align: center;
+            border-bottom: 6px solid var(--caramelo);
+        }
+        header h1 { margin: 0; font-size: 2.4rem; font-weight: 700; letter-spacing: 1px; }
+        header p { margin: 4px 0 0; color: var(--caramelo); font-weight: 500; }
+        main { max-width: 1050px; margin: 0 auto; padding: 24px 16px 60px; }
+
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
+        .toolbar input, .toolbar select { flex: 1; min-width: 160px; }
+        input, select, textarea {
+            font: inherit; padding: 10px 14px; border-radius: 14px;
+            border: 2px solid var(--borda); background: #fff; color: var(--texto);
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--caramelo); }
+        button {
+            font: inherit; font-weight: 600; cursor: pointer; border: none;
+            padding: 10px 20px; border-radius: 999px; transition: transform .1s, filter .1s;
+        }
+        button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+        .btn-primary { background: var(--terracota); color: #fff; }
+        .btn-ghost { background: transparent; color: var(--vinho); border: 2px solid var(--vinho); }
+        .btn-danger { background: transparent; color: var(--vinho); padding: 6px 14px; border: 2px solid var(--borda); }
+        .btn-edit { background: var(--caramelo); color: #fff; padding: 6px 14px; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+        .card {
+            background: var(--card); border: 2px solid var(--borda); border-radius: 24px;
+            padding: 18px; display: flex; flex-direction: column; gap: 8px;
+            box-shadow: 0 4px 0 var(--borda);
+        }
+        .tag {
+            align-self: flex-start; background: var(--caramelo); color: #fff;
+            font-size: .8rem; font-weight: 600; padding: 3px 12px; border-radius: 999px;
+        }
+        .card h3 { margin: 0; font-size: 1.25rem; color: var(--vinho); }
+        .card .desc { margin: 0; color: var(--suave); font-size: .95rem; flex: 1; }
+        .card .vend { font-size: .85rem; color: var(--suave); }
+        .card .preco { font-size: 1.4rem; font-weight: 700; color: var(--terracota); }
+        .card .acoes { display: flex; gap: 8px; margin-top: 6px; }
+
+        .vazio, .erro { text-align: center; padding: 40px 10px; color: var(--suave); }
+        .erro { color: var(--vinho); background: #fff; border: 2px dashed var(--vinho); border-radius: 20px; }
+
+        /* Modal (sem <dialog>) */
+        .overlay {
+            display: none; position: fixed; inset: 0; z-index: 100;
+            background: rgba(58,26,31,.55);
+            align-items: center; justify-content: center; padding: 16px;
+        }
+        .overlay.aberto { display: flex; }
+        .caixa {
+            background: var(--creme); border-radius: 28px; padding: 26px;
+            width: min(460px, 100%); max-height: 92vh; overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(107,30,46,.35);
+        }
+        .caixa h2 { margin: 0 0 14px; color: var(--vinho); }
+        label { display: block; font-size: .9rem; font-weight: 500; margin: 10px 0 4px; color: var(--vinho); }
+        .caixa input, .caixa select, .caixa textarea { width: 100%; }
+        textarea { resize: vertical; min-height: 80px; }
+        .rodape { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+        #toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: var(--vinho); color: #fff; padding: 12px 22px; border-radius: 999px;
+            transition: transform .3s; z-index: 200;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Lasai</h1>
+    <p>cardápio &amp; produtos</p>
+</header>
+
+<main>
+    <div class="toolbar">
+        <input id="busca" type="search" placeholder="Buscar por nome, descrição ou vendedor...">
+        <select id="filtroCategoria"><option value="">Todas as categorias</option></select>
+        <button type="button" class="btn-primary" id="btnNovo">+ Novo item</button>
+    </div>
+
+    <div id="lista" class="grid"></div>
+</main>
+
+<div class="overlay" id="modal">
+    <div class="caixa">
+        <h2 id="modalTitulo">Novo item</h2>
+        <input type="hidden" id="fId">
+
+        <label for="fNome">Nome</label>
+        <input id="fNome">
+
+        <label for="fDescricao">Descrição</label>
+        <textarea id="fDescricao"></textarea>
+
+        <label for="fPreco">Preço (R$)</label>
+        <input id="fPreco" type="number" step="0.01" min="0">
+
+        <label for="fCategoria">Categoria</label>
+        <select id="fCategoria"></select>
+
+        <label for="fVendedor">Vendedor</label>
+        <input id="fVendedor">
+
+        <div class="rodape">
+            <button type="button" class="btn-ghost" id="btnCancelar">Cancelar</button>
+            <button type="button" class="btn-primary" id="btnSalvar">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+    // ====== CONFIGURAÇÃO ======
+    const API_URL = 'http://localhost:8080/restaurante';
+    const CATEGORIAS = ['Sobremesa', 'Japonesa', 'Bebida', 'Marmita', 'Indiana', 'Brasileira'];
+    // ==========================
+
+    let itens = [];
+
+    const $ = id => document.getElementById(id);
+    const brl = v => (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    function toast(msg) {
+        const t = $('toast'); t.textContent = msg; t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    CATEGORIAS.forEach(c => {
+        $('filtroCategoria').add(new Option(c, c));
+        $('fCategoria').add(new Option(c, c));
+    });
+
+    async function carregar() {
+        try {
+            const r = await fetch(API_URL);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            itens = await r.json();
+            render();
+        } catch (e) {
+            $('lista').innerHTML = `<div class="erro" style="grid-column:1/-1">
+        Não consegui falar com a API em <b>${esc(API_URL)}</b>.<br>
+        Confira se ela está rodando, se a rota está certa e se o CORS está liberado.</div>`;
+        }
+    }
+
+    function render() {
+        const q = $('busca').value.toLowerCase().trim();
+        const cat = $('filtroCategoria').value;
+        const filtrados = itens.filter(i =>
+            (!cat || i.categorias === cat) &&
+            (!q || [i.nome, i.descricao, i.vendedor].some(x => (x || '').toLowerCase().includes(q)))
+        );
+
+        if (!filtrados.length) {
+            $('lista').innerHTML = '<div class="vazio" style="grid-column:1/-1">Nenhum item encontrado 🐯</div>';
+            return;
+        }
+
+        $('lista').innerHTML = filtrados.map(i => `
+      <article class="card">
+        <span class="tag">${esc(i.categorias)}</span>
+        <h3>${esc(i.nome)}</h3>
+        <p class="desc">${esc(i.descricao)}</p>
+        <span class="vend">Vendedor: ${esc(i.vendedor)}</span>
+        <span class="preco">${brl(i.preco)}</span>
+        <div class="acoes">
+          <button type="button" class="btn-edit" data-acao="editar" data-id="${i.id}">Editar</button>
+          <button type="button" class="btn-danger" data-acao="excluir" data-id="${i.id}">Excluir</button>
+        </div>
+      </article>`).join('');
+    }
+
+    function abrirModal(item) {
+        $('modalTitulo').textContent = item ? 'Editar item' : 'Novo item';
+        $('fId').value = item ? item.id : '';
+        $('fNome').value = item ? (item.nome || '') : '';
+        $('fDescricao').value = item ? (item.descricao || '') : '';
+        $('fPreco').value = item ? (item.preco ?? '') : '';
+        $('fCategoria').value = item && item.categorias ? item.categorias : CATEGORIAS[0];
+        $('fVendedor').value = item ? (item.vendedor || '') : '';
+        $('modal').classList.add('aberto');
+        $('fNome').focus();
+    }
+
+    function fecharModal() {
+        $('modal').classList.remove('aberto');
+    }
+
+    async function excluir(id) {
+        if (!confirm('Excluir este item?')) return;
+        try {
+            const r = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            toast('Item excluído');
+            carregar();
+        } catch (e) { toast('Erro ao excluir'); }
+    }
+
+    async function salvar() {
+        const id = $('fId').value;
+        if (!$('fNome').value.trim()) { toast('Informe o nome'); return; }
+
+        const corpo = {
+            nome: $('fNome').value.trim(),
+            descricao: $('fDescricao').value.trim(),
+            preco: parseFloat($('fPreco').value) || 0,
+            categorias: $('fCategoria').value,
+            vendedor: $('fVendedor').value.trim()
+        };
+        if (id) corpo.id = Number(id);
+
+        try {
+            const r = await fetch(id ? `${API_URL}/${id}` : API_URL, {
+                method: id ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(corpo)
+            });
+            if (!r.ok) {
+                const detalhe = await r.text();
+                console.error('Resposta da API:', detalhe);
+                throw new Error('HTTP ' + r.status + ' ' + detalhe.slice(0, 120));
+            }
+            fecharModal();
+            toast(id ? 'Item atualizado' : 'Item criado');
+            carregar();
+        } catch (e) { toast('Erro ao salvar (' + e.message + ')'); }
+    }
+
+    // Eventos
+    $('btnNovo').addEventListener('click', () => abrirModal(null));
+    $('btnCancelar').addEventListener('click', fecharModal);
+    $('btnSalvar').addEventListener('click', salvar);
+    $('busca').addEventListener('input', render);
+    $('filtroCategoria').addEventListener('change', render);
+
+    // clicar fora da caixa fecha o modal; Esc também
+    $('modal').addEventListener('click', e => { if (e.target === $('modal')) fecharModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal(); });
+
+    // botões Editar / Excluir dos cards
+    $('lista').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-acao]');
+        if (!btn) return;
+        const id = Number(btn.dataset.id);
+        if (btn.dataset.acao === 'editar') abrirModal(itens.find(i => i.id === id));
+        if (btn.dataset.acao === 'excluir') excluir(id);
+    });
+
+    carregar();
+</script>
+</body>
+</html>
